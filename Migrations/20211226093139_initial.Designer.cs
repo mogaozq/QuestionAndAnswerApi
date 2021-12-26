@@ -10,7 +10,7 @@ using QuestionAndAnswerApi.Data.EntityFrameworkCore;
 namespace QuestionAndAnswerApi.Migrations
 {
     [DbContext(typeof(EfDbContext))]
-    [Migration("20211126130708_initial")]
+    [Migration("20211226093139_initial")]
     partial class initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,25 +26,36 @@ namespace QuestionAndAnswerApi.Migrations
                     b.Property<int>("AnswerId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("answerid")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("content");
 
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
-                    b.Property<int?>("QuestionId")
-                        .HasColumnType("integer");
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("questionid");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("userid");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("username");
 
-                    b.HasKey("AnswerId");
+                    b.HasKey("AnswerId")
+                        .HasName("pk_answers");
 
-                    b.HasIndex("QuestionId");
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_answers_questionid");
 
-                    b.ToTable("Answers");
+                    b.ToTable("answers");
                 });
 
             modelBuilder.Entity("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Question", b =>
@@ -52,33 +63,43 @@ namespace QuestionAndAnswerApi.Migrations
                     b.Property<int>("QuestionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("questionid")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("content");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
                     b.Property<string>("Title")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
 
                     b.Property<string>("UserId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("userid");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("username");
 
-                    b.HasKey("QuestionId");
+                    b.HasKey("QuestionId")
+                        .HasName("pk_questions");
 
-                    b.ToTable("Questions");
+                    b.ToTable("questions");
                 });
 
             modelBuilder.Entity("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Answer", b =>
                 {
                     b.HasOne("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Question", "Question")
                         .WithMany("Answers")
-                        .HasForeignKey("QuestionId");
+                        .HasForeignKey("QuestionId")
+                        .HasConstraintName("fk_answers_questions_questionid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Question");
                 });

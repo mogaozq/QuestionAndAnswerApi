@@ -24,28 +24,36 @@ namespace QuestionAndAnswerApi.Migrations
                     b.Property<int>("AnswerId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("answerid")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("content");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
                     b.Property<int>("QuestionId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("questionid");
 
                     b.Property<string>("UserId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("userid");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("username");
 
-                    b.HasKey("AnswerId");
+                    b.HasKey("AnswerId")
+                        .HasName("pk_answers");
 
-                    b.HasIndex("QuestionId");
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_answers_questionid");
 
-                    b.ToTable("Answers");
+                    b.ToTable("answers");
                 });
 
             modelBuilder.Entity("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Question", b =>
@@ -53,26 +61,33 @@ namespace QuestionAndAnswerApi.Migrations
                     b.Property<int>("QuestionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("questionid")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("content");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("createdat");
 
                     b.Property<string>("Title")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
 
                     b.Property<string>("UserId")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("userid");
 
                     b.Property<string>("UserName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("username");
 
-                    b.HasKey("QuestionId");
+                    b.HasKey("QuestionId")
+                        .HasName("pk_questions");
 
-                    b.ToTable("Questions");
+                    b.ToTable("questions");
                 });
 
             modelBuilder.Entity("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Answer", b =>
@@ -80,6 +95,7 @@ namespace QuestionAndAnswerApi.Migrations
                     b.HasOne("QuestionAndAnswerApi.Data.EntityFrameworkCore.Models.Question", "Question")
                         .WithMany("Answers")
                         .HasForeignKey("QuestionId")
+                        .HasConstraintName("fk_answers_questions_questionid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

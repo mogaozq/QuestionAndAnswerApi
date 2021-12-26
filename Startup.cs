@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using QuestionAndAnswerApi.Data;
+using QuestionAndAnswerApi.Data.Dapper.Repositories;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore.Repositories;
 using System;
@@ -29,7 +30,7 @@ namespace QuestionAndAnswerApi
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<EfDbContext>(options => options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<EfDbContext>(options => options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection")).UseLowerCaseNamingConvention());
             services.AddDatabaseDeveloperPageExceptionFilter();
             services.AddControllers();
 
@@ -38,8 +39,11 @@ namespace QuestionAndAnswerApi
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "QuestionAndAnswerApi", Version = "v1" });
             });
 
-            services.AddScoped<IQuestionRepository, EfQuestionRepository>();
-            services.AddScoped<IAnswerRepository, EfAnswerRepository>();
+            //services.AddScoped<IQuestionRepository, EfQuestionRepository>();
+            //services.AddScoped<IAnswerRepository, EfAnswerRepository>();
+
+            services.AddScoped<IQuestionRepository, DpQuestionRepository>();
+            services.AddScoped<IAnswerRepository, DpAnswerRepository>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
