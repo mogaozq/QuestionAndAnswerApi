@@ -1,4 +1,5 @@
 ﻿using QandA.Data.Models;
+using QuestionAndAnswerApi.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,19 +9,23 @@ namespace QuestionAndAnswerApi.Data
 {
     public interface IQuestionRepository
     {
-        QuestionWithAnswers GetQuestion(int questionId);
+        QuestionModel GetQuestion(int questionId);
 
-        IEnumerable<QuestionWithoutAnswers> GetQuestions();
+        IEnumerable<QuestionModel> GetQuestions();
 
-        IEnumerable<QuestionWithoutAnswers> GetQuestionsBySearch(string search);
+        IEnumerable<QuestionModel> GetQuestionsWithAnswers();
 
-        IEnumerable<QuestionWithoutAnswers> GetUnansweredQuestions();
+        IEnumerable<QuestionModel> GetQuestionsBySearch(string search);
+        IEnumerable<QuestionModel> GetQuestionsBySearchWithPaging(string search, int page, int pageSize);
+        IEnumerable<QuestionModel> GetUnansweredQuestions();
+        IEnumerable<QuestionModel> GetUnansweredQuestionsWithPaged(int page, int pageSize);
+        Task<IEnumerable<QuestionModel>> GetUnansweredQuestionsWithPagedAsync(int page, int pageSize);
 
         bool QuestionExists(int questionId);
 
-        QuestionWithAnswers CreateQuestion(QuestionCreateModel questionModel);
+        QuestionModel CreateQuestion(QuestionCreateModel questionModel);
 
-        QuestionWithAnswers UpdateQuestion(int questionId, QuestionUpdateModel questionModel);
+        QuestionModel UpdateQuestion(int questionId, QuestionUpdateModel questionModel);
 
         void DeleteQuestion(int questionId);
 

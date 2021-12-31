@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using QuestionAndAnswerApi.Data;
+using QuestionAndAnswerApi.Data.Cache;
 using QuestionAndAnswerApi.Data.Dapper.Repositories;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore.Repositories;
@@ -39,11 +40,14 @@ namespace QuestionAndAnswerApi
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "QuestionAndAnswerApi", Version = "v1" });
             });
 
-            //services.AddScoped<IQuestionRepository, EfQuestionRepository>();
-            //services.AddScoped<IAnswerRepository, EfAnswerRepository>();
+            services.AddScoped<IQuestionRepository, EfQuestionRepository>();
+            services.AddScoped<IAnswerRepository, EfAnswerRepository>();
 
             services.AddScoped<IQuestionRepository, DpQuestionRepository>();
             services.AddScoped<IAnswerRepository, DpAnswerRepository>();
+
+            services.AddMemoryCache();
+            services.AddSingleton<IQuestionCache, QuestionCache>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using QandA.Data.Models;
 using QuestionAndAnswerApi.Data;
+using QuestionAndAnswerApi.Data.Cache;
+using QuestionAndAnswerApi.Data.Models;
 using QuestionAndAnswerApi.Models;
+using QuestionAndAnswerApi.Requests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,40 +18,48 @@ namespace QuestionAndAnswerApi.Controllers
     {
         private readonly IQuestionRepository _questionRepo;
         private readonly IAnswerRepository _answerRepo;
+        private readonly IQuestionCache _cache;
 
-        public QuestionsController(IQuestionRepository questionRepo, IAnswerRepository answerRepo)
+        public QuestionsController(IQuestionRepository questionRepo, IAnswerRepository answerRepo, IQuestionCache cache)
         {
             _questionRepo = questionRepo;
             _answerRepo = answerRepo;
+            _cache = cache;
         }
 
         [HttpGet]
-        public IEnumerable<QuestionWithoutAnswers> GetQuestion(string search)
+        public IEnumerable<QuestionModel> GetQuestion(string search, bool includeAnswers = false, int page = 1, int pageSize = 10)
         {
             if (string.IsNullOrEmpty(search))
-                return _questionRepo.GetQuestions();
+            {
+                if (includeAnswers)
+                    return _questionRepo.GetQuestionsWithAnswers();
+                else
+                    return _questionRepo.GetQuestions();
+            }
             else
-                return _questionRepo.GetQuestionsBySearch(search);
+                return _questionRepo.GetQuestionsBySearchWithPaging(search, page, pageSize);
         }
 
         [HttpGet("{questionId}")]
-        public ActionResult<QuestionWithAnswers> GetQuestions(int questionId)
+        public ActionResult<QuestionModel> GetQuestions(int questionId)
         {
-            var question = _questionRepo.GetQuestion(questionId);
+            var question = _cache.GetQuestion(questionId);
+            if (question != null)
+                return question;
+
+            question = _questionRepo.GetQuestion(questionId);
             if (question == null)
                 return NotFound();
 
+            _cache.Set(question);
             return question;
         }
 
-        [HttpGet("unanswered")]
-        public IEnumerable<QuestionWithoutAnswers> GetUnansweredQuestions()
-        {
-            return _questionRepo.GetUnansweredQuestions();
-        }
+        
 
         [HttpPost]
-        public ActionResult<QuestionWithAnswers> CreateQuestion(QuestionCreateUpdateDto questionCreateDto)
+        public ActionResult<QuestionModel> CreateQuestion(QuestionCreateUpdateDto questionCreateDto)
         {
             var question = _questionRepo.CreateQuestion(new QuestionCreateModel
             {
@@ -59,12 +70,13 @@ namespace QuestionAndAnswerApi.Controllers
                 CreatedAt = DateTimeOffset.UtcNow
             });
 
+            _cache.Set(question);
             return CreatedAtAction(nameof(GetQuestion), new { questionId = question.QuestionId }, question);
         }
 
 
         [HttpPut("{questionId}")]
-        public ActionResult<QuestionWithAnswers> UpdateQuestion(int questionId, QuestionCreateUpdateDto questionCreateDto)
+        public ActionResult<QuestionModel> UpdateQuestion(int questionId, QuestionCreateUpdateDto questionCreateDto)
         {
             var question = _questionRepo.GetQuestion(questionId);
             if (question == null)
@@ -76,11 +88,12 @@ namespace QuestionAndAnswerApi.Controllers
                 Content = questionCreateDto.Content
             });
 
+            _cache.Remove(questionId);
             return updatedQuestion;
         }
 
         [HttpDelete("{questionId}")]
-        public ActionResult<QuestionWithAnswers> DeleteQuestion(int questionId)
+        public ActionResult<QuestionModel> DeleteQuestion(int questionId)
         {
             var question = _questionRepo.GetQuestion(questionId);
             if (question == null)
@@ -88,7 +101,14 @@ namespace QuestionAndAnswerApi.Controllers
 
             _questionRepo.DeleteQuestion(questionId);
 
+            _cache.Remove(questionId);
             return NoContent();
+        }
+
+        [HttpGet("unanswered")]
+        public async Task<IEnumerable<QuestionModel>> GetUnansweredQuestions([FromQuery] RequestParams parameters)
+        {
+            return await _questionRepo.GetUnansweredQuestionsWithPagedAsync(parameters.Page, parameters.PageSize);
         }
 
         [HttpPost("{questionId}/answers")]
@@ -101,9 +121,9 @@ namespace QuestionAndAnswerApi.Controllers
             {
                 QuestionId = questionId,
                 Content = createAnswerDto.Content,
-                CreatedAt= DateTimeOffset.UtcNow,
-                UserId="1",
-                UserName="moga@gmail.com"
+                CreatedAt = DateTimeOffset.UtcNow,
+                UserId = "1",
+                UserName = "moga@gmail.com"
             });
 
             return answer;
