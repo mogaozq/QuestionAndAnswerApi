@@ -78,6 +78,35 @@ namespace QuestionAndAnswerApi.Data.EntityFrameworkCore.Repositories
             };
         }
 
+        public async Task<QuestionModel> GetQuestionAsync(int questionId)
+        {
+            var question = await _dbContext
+                .Questions.AsNoTracking()
+                .SingleOrDefaultAsync(q => q.QuestionId == questionId);
+
+            question.Answers = _dbContext.Answers.AsNoTracking().Where(a => a.QuestionId == questionId).ToList();
+
+            if (question == null)
+                return null;
+
+            return new QuestionModel
+            {
+                QuestionId = question.QuestionId,
+                Title = question.Title,
+                Content = question.Content,
+                CreatedAt = question.CreatedAt,
+                UserName = question.UserName,
+                UserId = question.UserId,
+                Answers = question.Answers.Select(a => new AnswerModel
+                {
+                    AnswerId = a.AnswerId,
+                    Content = a.Content,
+                    CreatedAt = a.CreatedAt,
+                    UserName = a.UserName
+                }).ToList()
+            };
+        }
+
         public IEnumerable<QuestionModel> GetUnansweredQuestions()
         {
             var questions = _dbContext.Questions.AsNoTracking()
@@ -182,7 +211,9 @@ namespace QuestionAndAnswerApi.Data.EntityFrameworkCore.Repositories
         public IEnumerable<QuestionModel> GetQuestionsWithAnswers()
         {
             throw new NotImplementedException();
+
         }
+
 
         public IEnumerable<QuestionModel> GetQuestionsBySearchWithPaging(string search, int page, int pageSize)
         {

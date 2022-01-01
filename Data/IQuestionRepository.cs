@@ -10,11 +10,11 @@ namespace QuestionAndAnswerApi.Data
     public interface IQuestionRepository
     {
         QuestionModel GetQuestion(int questionId);
+        Task<QuestionModel> GetQuestionAsync(int questionId);
 
         IEnumerable<QuestionModel> GetQuestions();
 
         IEnumerable<QuestionModel> GetQuestionsWithAnswers();
-
         IEnumerable<QuestionModel> GetQuestionsBySearch(string search);
         IEnumerable<QuestionModel> GetQuestionsBySearchWithPaging(string search, int page, int pageSize);
         IEnumerable<QuestionModel> GetUnansweredQuestions();

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -8,11 +9,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using QuestionAndAnswerApi.Authorization;
 using QuestionAndAnswerApi.Data;
 using QuestionAndAnswerApi.Data.Cache;
 using QuestionAndAnswerApi.Data.Dapper.Repositories;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore;
 using QuestionAndAnswerApi.Data.EntityFrameworkCore.Repositories;
+using QuestionAndAnswerApi.Extentions.Startup;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,14 +34,12 @@ namespace QuestionAndAnswerApi
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpContextAccessor();
+            services.AddHttpClient();
+
             services.AddDbContext<EfDbContext>(options => options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection")).UseLowerCaseNamingConvention());
             services.AddDatabaseDeveloperPageExceptionFilter();
             services.AddControllers();
-
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "QuestionAndAnswerApi", Version = "v1" });
-            });
 
             services.AddScoped<IQuestionRepository, EfQuestionRepository>();
             services.AddScoped<IAnswerRepository, EfAnswerRepository>();
@@ -48,6 +49,19 @@ namespace QuestionAndAnswerApi
 
             services.AddMemoryCache();
             services.AddSingleton<IQuestionCache, QuestionCache>();
+
+            services.Add_Identity(Configuration);
+            services.Add_Authorization();
+
+            services.Add_Swagger();
+
+            services.AddCors(options =>
+                options.AddPolicy("CorsPolicy", builder =>
+                    builder
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .WithOrigins(Configuration["Frontend"])));
+
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -62,6 +76,10 @@ namespace QuestionAndAnswerApi
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors("CorsPolicy");
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

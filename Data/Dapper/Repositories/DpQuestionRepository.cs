@@ -94,6 +94,20 @@ namespace QuestionAndAnswerApi.Data.Dapper.Repositories
             return question;
         }
 
+        public async Task<QuestionModel> GetQuestionAsync(int questionId)
+        {
+            using var conn = OpenConnection(_connectionString);
+            string sqlCommand = "select * from Questions where questionId=@QuestionId;" +
+                "select * from Answers where questionId=@QuestionId";
+            using var result = await conn.QueryMultipleAsync(sqlCommand, new { QuestionId = questionId });
+            var question = result.Read<QuestionModel>().SingleOrDefault();
+
+            if (question != null)
+                question.Answers = result.Read<AnswerModel>().ToList();
+
+            return question;
+        }
+
         public bool QuestionExists(int questionId)
         {
             using var conn = OpenConnection(_connectionString);
@@ -189,7 +203,6 @@ namespace QuestionAndAnswerApi.Data.Dapper.Repositories
 
             return questionsDictionary.Values;
         }
-
 
     }
 }

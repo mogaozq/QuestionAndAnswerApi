@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using QandA.Data.Models;
 using QuestionAndAnswerApi.Data;
 using QuestionAndAnswerApi.Data.Cache;
@@ -8,27 +10,36 @@ using QuestionAndAnswerApi.Requests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace QuestionAndAnswerApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class QuestionsController : ControllerBase
     {
         private readonly IQuestionRepository _questionRepo;
         private readonly IAnswerRepository _answerRepo;
         private readonly IQuestionCache _cache;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _userProfileUrl;
 
-        public QuestionsController(IQuestionRepository questionRepo, IAnswerRepository answerRepo, IQuestionCache cache)
+        public QuestionsController(IQuestionRepository questionRepo, IAnswerRepository answerRepo, IQuestionCache cache, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _questionRepo = questionRepo;
             _answerRepo = answerRepo;
             _cache = cache;
+            _httpClientFactory = httpClientFactory;
+            _userProfileUrl = $"{configuration["Auth0:Authority"]}userinfo";
         }
 
         [HttpGet]
-        public IEnumerable<QuestionModel> GetQuestion(string search, bool includeAnswers = false, int page = 1, int pageSize = 10)
+        [AllowAnonymous]
+        public IEnumerable<QuestionModel> GetQuestions(string search, bool includeAnswers = false, int page = 1, int pageSize = 10)
         {
             if (string.IsNullOrEmpty(search))
             {
@@ -42,7 +53,7 @@ namespace QuestionAndAnswerApi.Controllers
         }
 
         [HttpGet("{questionId}")]
-        public ActionResult<QuestionModel> GetQuestions(int questionId)
+        public ActionResult<QuestionModel> GetQuestion(int questionId)
         {
             var question = _cache.GetQuestion(questionId);
             if (question != null)
@@ -56,17 +67,15 @@ namespace QuestionAndAnswerApi.Controllers
             return question;
         }
 
-        
-
         [HttpPost]
-        public ActionResult<QuestionModel> CreateQuestion(QuestionCreateUpdateDto questionCreateDto)
+        public async Task<ActionResult<QuestionModel>> CreateQuestionAsync(QuestionCreateUpdateDto questionCreateDto)
         {
             var question = _questionRepo.CreateQuestion(new QuestionCreateModel
             {
                 Title = questionCreateDto.Title,
                 Content = questionCreateDto.Content,
-                UserId = "1",
-                UserName = "moga@gmail.com",
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                UserName = (await GetUserInfoAsync()).Name,
                 CreatedAt = DateTimeOffset.UtcNow
             });
 
@@ -74,11 +83,11 @@ namespace QuestionAndAnswerApi.Controllers
             return CreatedAtAction(nameof(GetQuestion), new { questionId = question.QuestionId }, question);
         }
 
-
         [HttpPut("{questionId}")]
+        [Authorize("QuestionAuthor")]
         public ActionResult<QuestionModel> UpdateQuestion(int questionId, QuestionCreateUpdateDto questionCreateDto)
         {
-            var question = _questionRepo.GetQuestion(questionId);
+            var question = _questionRepo.GetQuestionAsync(questionId);
             if (question == null)
                 return NotFound();
 
@@ -93,9 +102,10 @@ namespace QuestionAndAnswerApi.Controllers
         }
 
         [HttpDelete("{questionId}")]
+        [Authorize("QuestionAuthor")]
         public ActionResult<QuestionModel> DeleteQuestion(int questionId)
         {
-            var question = _questionRepo.GetQuestion(questionId);
+            var question = _questionRepo.GetQuestionAsync(questionId);
             if (question == null)
                 return NoContent();
 
@@ -112,7 +122,7 @@ namespace QuestionAndAnswerApi.Controllers
         }
 
         [HttpPost("{questionId}/answers")]
-        public ActionResult<AnswerModel> CreateAnswer(int questionId, CreateUpdateAnswerDto createAnswerDto)
+        public async Task<ActionResult<AnswerModel>> CreateAnswerAsync(int questionId, CreateUpdateAnswerDto createAnswerDto)
         {
             if (!_questionRepo.QuestionExists(questionId))
                 return NotFound();
@@ -122,12 +132,27 @@ namespace QuestionAndAnswerApi.Controllers
                 QuestionId = questionId,
                 Content = createAnswerDto.Content,
                 CreatedAt = DateTimeOffset.UtcNow,
-                UserId = "1",
-                UserName = "moga@gmail.com"
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                UserName = (await GetUserInfoAsync()).Name
             });
 
             return answer;
         }
 
+        private async Task<User> GetUserInfoAsync()
+        {
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, _userProfileUrl);
+            httpRequest.Headers.Add("Authorization", Request.Headers["Authorization"].First());
+
+            var client = _httpClientFactory.CreateClient();
+            var httpResponse = await client.SendAsync(httpRequest);
+            if (httpResponse.IsSuccessStatusCode)
+            {
+                var responseContentString = await httpResponse.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<User>(responseContentString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+
+            throw new InvalidOperationException();
+        }
     }
 }
