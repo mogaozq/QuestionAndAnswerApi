@@ -53,6 +53,7 @@ namespace QuestionAndAnswerApi.Controllers
         }
 
         [HttpGet("{questionId}")]
+        [AllowAnonymous]
         public ActionResult<QuestionModel> GetQuestion(int questionId)
         {
             var question = _cache.GetQuestion(questionId);
@@ -78,7 +79,7 @@ namespace QuestionAndAnswerApi.Controllers
                 UserName = (await GetUserInfoAsync()).Name,
                 CreatedAt = DateTimeOffset.UtcNow
             });
-
+                
             _cache.Set(question);
             return CreatedAtAction(nameof(GetQuestion), new { questionId = question.QuestionId }, question);
         }
@@ -116,6 +117,7 @@ namespace QuestionAndAnswerApi.Controllers
         }
 
         [HttpGet("unanswered")]
+        [AllowAnonymous]
         public async Task<IEnumerable<QuestionModel>> GetUnansweredQuestions([FromQuery] RequestParams parameters)
         {
             return await _questionRepo.GetUnansweredQuestionsWithPagedAsync(parameters.Page, parameters.PageSize);
@@ -135,6 +137,8 @@ namespace QuestionAndAnswerApi.Controllers
                 UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
                 UserName = (await GetUserInfoAsync()).Name
             });
+
+            _cache.Remove(questionId);
 
             return answer;
         }
